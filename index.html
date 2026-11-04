@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cargar Afil IMSS</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .modal-card {
+            background: #ffffff;
+            width: 480px;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            position: relative;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+
+            .modal-header h3 {
+                margin: 0;
+                color: #222;
+                font-size: 18px;
+            }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 18px;
+            color: #777;
+            cursor: pointer;
+        }
+
+        .instruction-box {
+            border: 1px solid #d0d7de;
+            background-color: #fafbfc;
+            padding: 10px 15px;
+            border-radius: 4px;
+            font-style: italic;
+            font-size: 13px;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .input-custom-name {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 13px;
+        }
+
+        .drop-zone {
+            border: 2px dashed #7b9acc;
+            background-color: #f0f4fa;
+            border-radius: 6px;
+            padding: 30px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-bottom: 20px;
+        }
+
+            .drop-zone:hover {
+                background-color: #e4edf8;
+            }
+
+            .drop-zone svg {
+                width: 40px;
+                height: 40px;
+                fill: #4a76a8;
+                margin-bottom: 8px;
+            }
+
+        .drop-text {
+            color: #334e68;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .file-info {
+            font-size: 12px;
+            color: #27ae60;
+            margin-top: 5px;
+            word-break: break-all;
+            font-weight: bold;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            border: none;
+            font-weight: bold;
+        }
+
+        .btn-cancel {
+            background-color: #b0bac5;
+            color: #fff;
+        }
+
+        .btn-submit {
+            background-color: #68b39c;
+            color: #fff;
+        }
+        /* Spinner de carga */
+        #loading {
+            display: none;
+            text-align: center;
+            font-size: 13px;
+            color: #555;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3>Cargar Afil IMSS</h3>
+            <button class="close-btn">&times;</button>
+        </div>
+
+        <div class="instruction-box">
+            El archivo debe de tener como nombre el numero del trabajador (ext. jpg, jpeg o pdf)
+        </div>
+
+        <label style="font-size: 12px; color: #555; display: block; margin-bottom: 5px;">Número del trabajador (Nombre final del archivo):</label>
+        <input type="text" id="customFileName" class="input-custom-name" placeholder="Ej. 1530">
+
+        <!-- Zona de Arrastrar y Soltar -->
+        <div class="drop-zone" id="dropZone">
+            <svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z" /></svg>
+            <div class="drop-text">Haz clic o arrastra tu archivo aquí</div>
+            <div id="fileInfo" class="file-info"></div>
+            <input type="file" id="fileInput" accept=".jpg, .jpeg, .pdf" style="display: none;">
+        </div>
+
+        <div id="loading">Subiendo archivo a Google Drive, por favor espera...</div>
+
+        <div class="modal-footer">
+            <button class="btn btn-cancel" onclick="limpiarFormulario()">Cancelar</button>
+            <button class="btn btn-submit" id="submitBtn" onclick="subirArchivo()">Procesar y Subir</button>
+        </div>
+    </div>
+
+    <script>
+            // PEGA AQUÍ TU URL DE GOOGLE APPS SCRIPT
+            const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbywGfs1oZBR7w5bA97rd4cvqfdJSU9TnsGkFXSH-IS4s-x--GL8WjC7QyO95_iBHF25/exec";
+
+            let selectedFile = null;
+
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('fileInput');
+            const fileInfo = document.getElementById('fileInfo');
+            const submitBtn = document.getElementById('submitBtn');
+            const customFileNameInput = document.getElementById('customFileName');
+            const loadingDiv = document.getElementById('loading');
+
+            dropZone.addEventListener('click', () => fileInput.click());
+
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.style.borderColor = '#2980b9';
+                dropZone.style.backgroundColor = '#eaf2f8';
+            });
+
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.style.borderColor = '#7b9acc';
+                dropZone.style.backgroundColor = '#f0f4fa';
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.style.borderColor = '#7b9acc';
+                dropZone.style.backgroundColor = '#f0f4fa';
+                if (e.dataTransfer.files.length > 0) {
+                    processFile(e.dataTransfer.files[0]);
+                }
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    processFile(e.target.files[0]);
+                }
+            });
+
+            function processFile(file) {
+                selectedFile = file;
+                fileInfo.textContent = `Archivo seleccionado: ${file.name} (${Math.round(file.size / 1024)} KB)`;
+
+                // Autocompletar el input con el nombre original sin extensión si está vacío
+                const nameWithoutExt = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+                if (!customFileNameInput.value) {
+                    customFileNameInput.value = nameWithoutExt;
+                }
+            }
+
+            function subirArchivo() {
+                if (!selectedFile) {
+                    alert("Por favor selecciona o arrastra un archivo primero.");
+                    return;
+                }
+
+                let customName = customFileNameInput.value.trim();
+                if (!customName) {
+                    alert("Por favor ingresa el número del trabajador.");
+                    return;
+                }
+
+                const extension = selectedFile.name.substring(selectedFile.name.lastIndexOf('.'));
+                const finalFileName = customName.toLowerCase().endsWith(extension.toLowerCase()) ? customName : customName + extension;
+
+                loadingDiv.style.display = "block";
+                submitBtn.disabled = true;
+
+                const reader = new FileReader();
+                reader.readAsDataURL(selectedFile);
+                reader.onload = function () {
+                    const base64Data = reader.result.split(',')[1];
+
+                    const payload = {
+                        fileData: base64Data,
+                        fileName: finalFileName,
+                        mimeType: selectedFile.type
+                    };
+
+                    fetch(WEB_APP_URL, {
+                        method: "POST",
+                        body: JSON.stringify(payload)
+                    })
+                    .then(response => response.text())
+                    .then(result => {
+                        loadingDiv.style.display = "none";
+                        submitBtn.disabled = false;
+                        alert("¡Archivo subido exitosamente como: " + finalFileName + "!");
+                        limpiarFormulario();
+                    })
+                    .catch(error => {
+                        loadingDiv.style.display = "none";
+                        submitBtn.disabled = false;
+                        console.error("Error en fetch:", error);
+                        alert("Hubo un error de conexión con la API. Revisa la consola.");
+                    });
+                };
+                reader.onerror = function () {
+                    loadingDiv.style.display = "none";
+                    submitBtn.disabled = false;
+                    alert("No se pudo leer el archivo localmente.");
+                };
+            }
+
+            function limpiarFormulario() {
+                selectedFile = null;
+                fileInput.value = "";
+                fileInfo.textContent = "";
+                customFileNameInput.value = "";
+                submitBtn.disabled = false;
+                loadingDiv.style.display = "none";
+            }
+    </script>
+
+</body>
+</html>
