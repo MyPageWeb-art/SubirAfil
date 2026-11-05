@@ -234,47 +234,48 @@
                     return;
                 }
 
-                const extension = selectedFile.name.substring(selectedFile.name.lastIndexOf('.'));
-                const finalFileName = customName.toLowerCase().endsWith(extension.toLowerCase()) ? customName : customName + extension;
+       var extension = selectedFile.name.substring(selectedFile.name.lastIndexOf('.'));
+       var finalFileName = customName.toLowerCase().indexOf(extension.toLowerCase()) !== -1 ? customName : customName + extension;
 
-                loadingDiv.style.display = "block";
-                submitBtn.disabled = true;
+       loadingDiv.style.display = "block";
+       submitBtn.disabled = true;
 
-                const reader = new FileReader();
-                reader.readAsDataURL(selectedFile);
-                reader.onload = function () {
-                    const base64Data = reader.result.split(',')[1];
+       var reader = new FileReader();
+       reader.readAsDataURL(selectedFile);
+       reader.onload = function () {
+           var base64Data = reader.result.split(',')[1];
 
-                    const payload = {
-                        fileData: base64Data,
-                        fileName: finalFileName,
-                        mimeType: selectedFile.type
-                    };
+           var payload = {
+               fileData: base64Data,
+               fileName: finalFileName,
+               mimeType: selectedFile.type
+           };
 
-                    fetch(WEB_APP_URL, {
-                        method: "POST",
-                        body: JSON.stringify(payload)
-                    })
-                    .then(response => response.text())
-                    .then(result => {
-                        loadingDiv.style.display = "none";
-                        submitBtn.disabled = false;
-                        alert("¡Archivo subido exitosamente como: " + finalFileName + "!");
-                        limpiarFormulario();
-                    })
-                    .catch(error => {
-                        loadingDiv.style.display = "none";
-                        submitBtn.disabled = false;
-                        console.error("Error en fetch:", error);
-                        alert("Hubo un error de conexión con la API. Revisa la consola.");
-                    });
-                };
-                reader.onerror = function () {
-                    loadingDiv.style.display = "none";
-                    submitBtn.disabled = false;
-                    alert("No se pudo leer el archivo localmente.");
-                };
-            }
+           // Petición AJAX clásica compatible con Internet Explorer de Access
+           var xhr = new XMLHttpRequest();
+           xhr.open("POST", WEB_APP_URL, true);
+           xhr.setRequestHeader("Content-Type", "text/plain;charset=utf-8");
+           
+           xhr.onreadystatechange = function () {
+               if (xhr.readyState === 4) {
+                   loadingDiv.style.display = "none";
+                   submitBtn.disabled = false;
+                   if (xhr.status === 200) {
+                       alert("¡Archivo subido exitosamente como: " + finalFileName + "!");
+                       limpiarFormulario();
+                   } else {
+                       alert("Hubo un error al conectar con la API.");
+                   }
+               }
+           };
+           xhr.send(JSON.stringify(payload));
+       };
+       reader.onerror = function () {
+           loadingDiv.style.display = "none";
+           submitBtn.disabled = false;
+           alert("No se pudo leer el archivo localmente.");
+       };
+   }
 
             function limpiarFormulario() {
                 selectedFile = null;
